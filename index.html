@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>夕食作り支援アプリ</title>
+  <style>
+    /* パステルポップテーマ & スマホ画面ぴったりフィット設定 */
+    :root {
+      --bg-color: #FAF8F5;
+      --main-color: #A8E6CF;
+      --accent-color: #FFD3B6;
+      --sub-color: #FFAAA5;
+      --cal-color: #E2F0D9;
+      --card-bg: #FFFFFF;
+      --text-color: #4A4A4A;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh; /* スマホのアドレスバーの高さを除いた100% */
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* 全体スクロールを防止 */
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Helvetica Neue", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+      justify-content: space-between;
+    }
+
+    /* ヘッダー */
+    .header {
+      text-align: center;
+      padding: 4px 0;
+    }
+    .header h1 {
+      font-size: 1.05rem;
+      margin: 0;
+      color: #333;
+      font-weight: 700;
+    }
+
+    /* 7日間ミニカードエリア */
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #888;
+      margin: 6px 0 4px 2px;
+    }
+
+    .weekly-container {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      -webkit-overflow-scrolling: touch;
+      /* スクロールバーの非表示 */
+      scrollbar-width: none;
+    }
+    .weekly-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .day-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 8px 6px;
+      width: 76px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .day-card .date {
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: #666;
+    }
+
+    .day-card .thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #F0F0F0;
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      color: #AAA;
+      border: 1px solid #EAEAEA;
+    }
+
+    .day-card .title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* メインアクション・ボタンレイアウト */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--text-color);
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:active {
+      opacity: 0.85;
+      transform: scale(0.98);
+    }
+
+    .btn-main {
+      background-color: var(--main-color);
+      grid-column: span 2;
+      font-size: 1.05rem;
+      padding: 16px 8px;
+    }
+
+    .btn-web { background-color: var(--accent-color); }
+    .btn-memo { background-color: var(--sub-color); }
+    .btn-cal { background-color: var(--cal-color); grid-column: span 2; }
+
+    /* 買い物メモ（インライン展開） */
+    .memo-area {
+      display: none;
+      background: white;
+      padding: 10px 12px;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .memo-area textarea {
+      width: 100%;
+      height: 60px;
+      border-radius: 8px;
+      border: 1px solid #DDD;
+      padding: 6px;
+      font-size: 0.85rem;
+      resize: none;
+    }
+
+    /* モーダル（ポップアップ） */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 18px 16px;
+      width: 88%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #DDD;
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="header">
+      <h1>🍳 夕食コンパニオン</h1>
+    </div>
+
+    <div>
+      <div class="section-title">今週の献立（7日間）</div>
+      <div class="weekly-container" id="weeklyContainer">
+        <!-- JSで動的生成 -->
+      </div>
+    </div>
+
+    <!-- 買い物メモエリア -->
+    <div class="memo-area" id="memoArea">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:0.8rem; font-weight:bold;">📝 買い物メモ</span>
+        <button onclick="saveMemo()" style="font-size:0.75rem; border:none; background:var(--main-color); border-radius:6px; padding:2px 8px;">保存</button>
+      </div>
+      <textarea id="memoText" placeholder="買いたい材料を入力..."></textarea>
+    </div>
+
+    <div class="menu-grid">
+      <button class="btn btn-main" onclick="openRegisterModal()">🍳 料理を登録する</button>
+      <button class="btn btn-web" onclick="openWebSearch()">🌐 レシピ検索</button>
+      <button class="btn btn-memo" onclick="toggleMemo()">📝 買い物メモ</button>
+      <button class="btn btn-cal" onclick="addToGoogleCalendar()">📅 Googleカレンダー連携</button>
+    </div>
+  </div>
+
+  <!-- 料理登録ダイアログ -->
+  <div class="modal" id="registerModal">
+    <div class="modal-content">
+      <h3>料理の登録</h3>
+      <button class="btn btn-main" style="width:100%; margin-bottom:8px; font-size:0.95rem;" onclick="selectMode('photo')">📷 撮影・写真選択</button>
+      <button class="btn btn-web" style="width:100%; font-size:0.95rem;" onclick="selectMode('text')">✏️ 文字入力のみ</button>
+      
+      <!-- 写真用ファイル入力（隠し） -->
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImage(event)">
+
+      <!-- 入力フォームエリア -->
+      <div id="inputForm" style="display:none; margin-top:12px;">
+        <input type="text" id="dishNameInput" placeholder="料理名を入力 (例: カレー)">
+        <button class="btn btn-main" style="width:100%; padding:10px; font-size:0.95rem;" onclick="saveDish()">登録する</button>
+      </div>
+      
+      <div onclick="closeModal()" style="color:#888; font-size:0.85rem; margin-top:12px; cursor:pointer;">キャンセル</div>
+    </div>
+  </div>
+
+  <script>
+    let currentImageBase64 = null;
+
+    // 初期化：7日分カードの描画
+    function renderWeeklyCards() {
+      const container = document.getElementById('weeklyContainer');
+      container.innerHTML = '';
+      const days = ['日', '月', '火', '水', '木', '金', '土'];
+      const today = new Date();
+
+      const dishes = JSON.parse(localStorage.getItem('dinner_dishes') || '{}');
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(today.getDate() + i);
+        const dateStr = `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})`;
+        const key = d.toISOString().split('T')[0];
+
+        const item = dishes[key] || { name: '未定', img: null };
+
+        const card = document.createElement('div');
+        card.className = 'day-card';
+        card.innerHTML = `
+          <div class="date">${dateStr}</div>
+          ${item.img 
+            ? `<img src="${item.img}" class="thumb">` 
+            : `<div class="thumb">No Img</div>`}
+          <div class="title">${item.name}</div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    // ダイアログ処理
+    function openRegisterModal() {
+      document.getElementById('registerModal').style.display = 'flex';
+      document.getElementById('inputForm').style.display = 'none';
+      currentImageBase64 = null;
+    }
+    function closeModal() {
+      document.getElementById('registerModal').style.display = 'none';
+    }
+
+    function selectMode(mode) {
+      if (mode === 'photo') {
+        document.getElementById('cameraInput').click();
+      } else {
+        document.getElementById('inputForm').style.display = 'block';
+      }
+    }
+
+    // 画像の軽量化処理（サムネイル用）
+    function handleImage(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 300; // 軽量化のため300pxまで圧縮
+          let w = img.width, h = img.height;
+          if (w > h) { h = h * (maxDim/w); w = maxDim; }
+          else { w = w * (maxDim/h); h = maxDim; }
+          
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          
+          currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          document.getElementById('inputForm').style.display = 'block';
+        }
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+
+    // 保存処理（本日分に保存）
+    function saveDish() {
+      const name = document.getElementById('dishNameInput').value;
+      if (!name) return alert('料理名を入力してください');
+
+      const todayKey = new Date().toISOString().split('T')[0];
+      const dishes = JSON.parse(localStorage.getItem('dinner_dishes') || '{}');
+      
+      dishes[todayKey] = {
+        name: name,
+        img: currentImageBase64
+      };
+
+      localStorage.setItem('dinner_dishes', JSON.stringify(dishes));
+      closeModal();
+      renderWeeklyCards();
+      document.getElementById('dishNameInput').value = '';
+    }
+
+    // 各種機能
+    function openWebSearch() {
+      window.open('https://www.google.com/search?q=夕食+レシピ', '_blank');
+    }
+
+    function toggleMemo() {
+      const memo = document.getElementById('memoArea');
+      const isHidden = memo.style.display === 'none' || memo.style.display === '';
+      memo.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        document.getElementById('memoText').value = localStorage.getItem('dinner_memo') || '';
+      }
+    }
+
+    function saveMemo() {
+      localStorage.setItem('dinner_memo', document.getElementById('memoText').value);
+      alert('メモを保存しました');
+    }
+
+    function addToGoogleCalendar() {
+      const todayKey = new Date().toISOString().split('T')[0];
+      const dishes = JSON.parse(localStorage.getItem('dinner_dishes') || '{}');
+      const currentDish = dishes[todayKey] ? dishes[todayKey].name : '夕食';
+
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('夕食: ' + currentDish)}`;
+      window.open(url, '_blank');
+    }
+
+    // 初期描画
+    renderWeeklyCards();
+  </script>
+</body>
+</html>
