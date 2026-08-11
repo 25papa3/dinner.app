@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>夕食作り支援アプリ</title>
   <style>
-    /* パステルポップテーマ & スマホ1画面フィット */
     :root {
       --bg-color: #FAF8F5;
       --main-color: #A8E6CF;
@@ -14,6 +13,7 @@
       --cal-color: #E2F0D9;
       --card-bg: #FFFFFF;
       --text-color: #4A4A4A;
+      --danger-color: #FF8B8B;
     }
 
     * {
@@ -41,7 +41,6 @@
       justify-content: space-between;
     }
 
-    /* ヘッダー */
     .header {
       text-align: center;
       padding: 2px 0;
@@ -60,7 +59,7 @@
       margin: 4px 0 2px 2px;
     }
 
-    /* 上部：7日間ミニカードエリア */
+    /* 7日間ミニカードエリア */
     .weekly-container {
       display: flex;
       gap: 6px;
@@ -78,6 +77,11 @@
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.04);
       flex-shrink: 0;
+      cursor: pointer;
+    }
+    .day-card:active {
+      transform: scale(0.96);
+      opacity: 0.8;
     }
     .day-card .date { font-size: 0.65rem; font-weight: bold; color: #666; }
     .day-card .thumb {
@@ -91,7 +95,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* 中央部：登録料理一覧エリア（新設） */
+    /* 登録料理一覧エリア */
     .dish-list-container {
       flex: 1;
       background: rgba(255, 255, 255, 0.6);
@@ -108,10 +112,20 @@
     .dish-item {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       background: var(--card-bg);
-      padding: 6px;
+      padding: 6px 10px 6px 6px;
       border-radius: 10px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      cursor: pointer;
+    }
+    .dish-item:active {
+      background: #F5F5F5;
+    }
+    .dish-item-left {
+      display: flex;
+      align-items: center;
+      overflow: hidden;
     }
     .dish-item img, .dish-item .no-img {
       width: 40px; height: 40px; border-radius: 8px;
@@ -119,7 +133,8 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 0.55rem; color: #AAA; margin-right: 8px; flex-shrink: 0;
     }
-    .dish-item .name { font-size: 0.85rem; font-weight: 600; color: #333; }
+    .dish-item .name { font-size: 0.85rem; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dish-item .edit-hint { font-size: 0.75rem; color: #BBB; }
 
     /* メモ表示欄（常設） */
     .memo-section {
@@ -143,7 +158,7 @@
       resize: none; background: #FAFAFA;
     }
 
-    /* 下部：操作ボタンエリア */
+    /* 下部：操作ボタン */
     .menu-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -174,19 +189,42 @@
     }
     .btn-web { background-color: var(--accent-color); }
     .btn-cal { background-color: var(--cal-color); }
+    .btn-danger { background-color: var(--danger-color); color: white; }
 
-    /* モーダル */
+    /* モーダル共通 */
     .modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100;
     }
     .modal-content {
       background: var(--card-bg); border-radius: 20px;
-      padding: 16px; width: 85%; max-width: 300px; text-align: center;
+      padding: 16px; width: 88%; max-width: 320px; text-align: center;
+      max-height: 80vh; display: flex; flex-direction: column;
     }
     input[type="text"] {
       width: 100%; padding: 8px; margin: 8px 0;
       border: 1px solid #DDD; border-radius: 8px; font-size: 0.85rem;
+    }
+
+    .select-dish-list {
+      overflow-y: auto;
+      margin: 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 250px;
+    }
+    .select-dish-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #FAFAFA;
+      border-radius: 10px;
+      border: 1px solid #EEE;
+      cursor: pointer;
+    }
+    .select-dish-item:active {
+      background: var(--main-color);
     }
   </style>
 </head>
@@ -197,18 +235,16 @@
       <h1>🍳 夕食コンパニオン</h1>
     </div>
 
-    <!-- 上部：7日間献立 -->
+    <!-- 7日間献立 -->
     <div>
-      <div class="section-title">今週の献立（7日間）</div>
+      <div class="section-title">今週の献立（日付タップで設定・変更）</div>
       <div class="weekly-container" id="weeklyContainer"></div>
     </div>
 
-    <!-- 中央部：登録料理一覧（新設） -->
+    <!-- 登録料理一覧 -->
     <div style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
-      <div class="section-title">📚 登録料理一覧</div>
-      <div class="dish-list-container" id="dishListContainer">
-        <!-- JSで一覧を動的生成 -->
-      </div>
+      <div class="section-title">📚 登録料理一覧（タップで編集・削除）</div>
+      <div class="dish-list-container" id="dishListContainer"></div>
     </div>
 
     <!-- メモ表示欄（常設） -->
@@ -222,16 +258,16 @@
 
     <!-- 下部アクションボタン -->
     <div class="menu-grid">
-      <button class="btn btn-main" onclick="openRegisterModal()">🍳 料理を登録する</button>
+      <button class="btn btn-main" onclick="openRegisterModal()">🍳 料理を新規登録</button>
       <button class="btn btn-web" onclick="openWebSearch()">🌐 レシピ検索</button>
       <button class="btn btn-cal" onclick="addToGoogleCalendar()">📅 Googleカレンダー連携</button>
     </div>
   </div>
 
-  <!-- 料理登録ダイアログ -->
+  <!-- 1. 料理新規登録モーダル -->
   <div class="modal" id="registerModal">
     <div class="modal-content">
-      <h3 style="margin-top:0; font-size:0.95rem;">料理の登録</h3>
+      <h3 style="margin-top:0; font-size:0.95rem;">料理の新規登録</h3>
       <button class="btn btn-main" style="width:100%; margin-bottom:8px;" onclick="selectMode('photo')">📷 撮影・写真選択</button>
       <button class="btn btn-web" style="width:100%;" onclick="selectMode('text')">✏️ 文字入力のみ</button>
       
@@ -242,12 +278,38 @@
         <button class="btn btn-main" style="width:100%; padding:8px;" onclick="saveDish()">一覧に追加保存</button>
       </div>
       
-      <div onclick="closeModal()" style="color:#888; font-size:0.8rem; margin-top:10px; cursor:pointer;">キャンセル</div>
+      <div onclick="closeModal('registerModal')" style="color:#888; font-size:0.8rem; margin-top:10px; cursor:pointer;">キャンセル</div>
+    </div>
+  </div>
+
+  <!-- 2. 献立割り当て・変更モーダル -->
+  <div class="modal" id="selectDishModal">
+    <div class="modal-content">
+      <h3 style="margin-top:0; font-size:0.95rem;" id="selectModalTitle">料理の選択</h3>
+      
+      <div class="select-dish-list" id="selectDishList"></div>
+      
+      <button id="clearDishBtn" class="btn btn-danger" style="width:100%; margin-top:6px; display:none;" onclick="clearDateDish()">この日の献立を解除する</button>
+      <div onclick="closeModal('selectDishModal')" style="color:#888; font-size:0.8rem; margin-top:10px; cursor:pointer;">キャンセル</div>
+    </div>
+  </div>
+
+  <!-- 3. 登録料理の編集・削除モーダル -->
+  <div class="modal" id="editDishModal">
+    <div class="modal-content">
+      <h3 style="margin-top:0; font-size:0.95rem;">登録料理の編集</h3>
+      <input type="text" id="editDishNameInput" placeholder="料理名">
+      <button class="btn btn-main" style="width:100%; margin-bottom:8px;" onclick="updateDishName()">料理名を変更</button>
+      <button class="btn btn-danger" style="width:100%;" onclick="deleteDish()">この料理を削除</button>
+      
+      <div onclick="closeModal('editDishModal')" style="color:#888; font-size:0.8rem; margin-top:12px; cursor:pointer;">キャンセル</div>
     </div>
   </div>
 
   <script>
     let currentImageBase64 = null;
+    let selectedDateKey = null;
+    let selectedDishId = null;
 
     // 1. 今週の献立（7日間）の描画
     function renderWeeklyCards() {
@@ -268,6 +330,7 @@
 
         const card = document.createElement('div');
         card.className = 'day-card';
+        card.onclick = () => onDayCardClick(dateStr, key, item);
         card.innerHTML = `
           <div class="date">${dateStr}</div>
           ${item.img 
@@ -279,7 +342,71 @@
       }
     }
 
-    // 2. 登録料理一覧の描画（中央部）
+    // 献立タップ時の処理
+    function onDayCardClick(dateStr, key, currentItem) {
+      selectedDateKey = key;
+      const clearBtn = document.getElementById('clearDishBtn');
+
+      if (currentItem.name !== '未定') {
+        clearBtn.style.display = 'block';
+      } else {
+        clearBtn.style.display = 'none';
+      }
+
+      openSelectDishModal(dateStr);
+    }
+
+    // 献立割り当てモーダル
+    function openSelectDishModal(dateStr) {
+      document.getElementById('selectModalTitle').innerText = `${dateStr} の料理を選択`;
+      const container = document.getElementById('selectDishList');
+      container.innerHTML = '';
+
+      const registeredList = JSON.parse(localStorage.getItem('registered_dishes') || '[]');
+
+      if (registeredList.length === 0) {
+        container.innerHTML = '<div style="color:#AAA; font-size:0.8rem; padding:15px;">登録済みの料理がありません。<br>先に料理を新規登録してください。</div>';
+      } else {
+        registeredList.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'select-dish-item';
+          div.onclick = () => assignDishToDate(item);
+          div.innerHTML = `
+            ${item.img 
+              ? `<img src="${item.img}" style="width:36px; height:36px; border-radius:6px; object-fit:cover; margin-right:8px;">` 
+              : `<div style="width:36px; height:36px; border-radius:6px; background:#EEE; display:flex; align-items:center; justify-content:center; font-size:0.5rem; color:#AAA; margin-right:8px;">No Img</div>`}
+            <div style="font-size:0.85rem; font-weight:600; color:#333;">${item.name}</div>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      document.getElementById('selectDishModal').style.display = 'flex';
+    }
+
+    // 献立への割当
+    function assignDishToDate(dishItem) {
+      const calendarDishes = JSON.parse(localStorage.getItem('dinner_calendar') || '{}');
+      calendarDishes[selectedDateKey] = {
+        name: dishItem.name,
+        img: dishItem.img
+      };
+
+      localStorage.setItem('dinner_calendar', JSON.stringify(calendarDishes));
+      closeModal('selectDishModal');
+      renderWeeklyCards();
+    }
+
+    // 献立の解除（削除）
+    function clearDateDish() {
+      const calendarDishes = JSON.parse(localStorage.getItem('dinner_calendar') || '{}');
+      delete calendarDishes[selectedDateKey];
+      localStorage.setItem('dinner_calendar', JSON.stringify(calendarDishes));
+      closeModal('selectDishModal');
+      renderWeeklyCards();
+    }
+
+    // 2. 登録料理一覧の描画
     function renderDishList() {
       const container = document.getElementById('dishListContainer');
       container.innerHTML = '';
@@ -293,24 +420,66 @@
       registeredList.forEach(item => {
         const div = document.createElement('div');
         div.className = 'dish-item';
+        div.onclick = () => openEditDishModal(item);
         div.innerHTML = `
-          ${item.img 
-            ? `<img src="${item.img}">` 
-            : `<div class="no-img">No Img</div>`}
-          <div class="name">${item.name}</div>
+          <div class="dish-item-left">
+            ${item.img 
+              ? `<img src="${item.img}">` 
+              : `<div class="no-img">No Img</div>`}
+            <div class="name">${item.name}</div>
+          </div>
+          <div class="edit-hint">編集 ❯</div>
         `;
         container.appendChild(div);
       });
     }
 
-    // モーダル処理
+    // 料理一覧の編集モーダル
+    function openEditDishModal(item) {
+      selectedDishId = item.id;
+      document.getElementById('editDishNameInput').value = item.name;
+      document.getElementById('editDishModal').style.display = 'flex';
+    }
+
+    // 料理名の変更
+    function updateDishName() {
+      const newName = document.getElementById('editDishNameInput').value;
+      if (!newName) return alert('料理名を入力してください');
+
+      let registeredList = JSON.parse(localStorage.getItem('registered_dishes') || '[]');
+      registeredList = registeredList.map(item => {
+        if (item.id === selectedDishId) {
+          item.name = newName;
+        }
+        return item;
+      });
+
+      localStorage.setItem('registered_dishes', JSON.stringify(registeredList));
+      closeModal('editDishModal');
+      renderDishList();
+      renderWeeklyCards(); // 献立名も更新反映
+    }
+
+    // 料理の削除
+    function deleteDish() {
+      if (!confirm('この料理を一覧から削除しますか？')) return;
+
+      let registeredList = JSON.parse(localStorage.getItem('registered_dishes') || '[]');
+      registeredList = registeredList.filter(item => item.id !== selectedDishId);
+
+      localStorage.setItem('registered_dishes', JSON.stringify(registeredList));
+      closeModal('editDishModal');
+      renderDishList();
+    }
+
+    // 共通モーダル操作
     function openRegisterModal() {
       document.getElementById('registerModal').style.display = 'flex';
       document.getElementById('inputForm').style.display = 'none';
       currentImageBase64 = null;
     }
-    function closeModal() {
-      document.getElementById('registerModal').style.display = 'none';
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
     }
 
     function selectMode(mode) {
@@ -347,7 +516,7 @@
       reader.readAsDataURL(file);
     }
 
-    // 料理一覧への保存処理
+    // 新規料理保存
     function saveDish() {
       const name = document.getElementById('dishNameInput').value;
       if (!name) return alert('料理名を入力してください');
@@ -360,12 +529,12 @@
       });
 
       localStorage.setItem('registered_dishes', JSON.stringify(registeredList));
-      closeModal();
+      closeModal('registerModal');
       renderDishList();
       document.getElementById('dishNameInput').value = '';
     }
 
-    // メモ保存処理
+    // メモ機能
     function loadMemo() {
       document.getElementById('memoText').value = localStorage.getItem('dinner_memo') || '';
     }
