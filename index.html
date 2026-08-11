@@ -107,6 +107,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-height: 80px;
     }
 
     .dish-item {
@@ -136,26 +137,46 @@
     .dish-item .name { font-size: 0.85rem; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dish-item .edit-hint { font-size: 0.75rem; color: #BBB; }
 
-    /* メモ表示欄（常設） */
+    /* メモ表示欄（拡張版） */
     .memo-section {
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 6px 10px;
+      padding: 8px 10px;
       margin-bottom: 6px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.03);
     }
     .memo-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
     }
     .memo-header span { font-size: 0.75rem; font-weight: bold; color: #666; }
-    .memo-header button {
-      font-size: 0.65rem; border: none; background: var(--main-color);
-      border-radius: 6px; padding: 2px 8px; cursor: pointer;
+    .memo-btn-group {
+      display: flex;
+      gap: 6px;
     }
+    .memo-header button {
+      font-size: 0.65rem; border: none;
+      border-radius: 6px; padding: 3px 8px; cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-memo-clear {
+      background: var(--danger-color);
+      color: white;
+    }
+    .btn-memo-save {
+      background: var(--main-color);
+      color: var(--text-color);
+    }
+    /* 高さを従来の3倍（約115px）に拡張 */
     .memo-textarea {
-      width: 100%; height: 38px; border: 1px solid #EEE;
-      border-radius: 6px; padding: 4px; font-size: 0.8rem;
-      resize: none; background: #FAFAFA;
+      width: 100%;
+      height: 115px;
+      border: 1px solid #EEE;
+      border-radius: 8px;
+      padding: 6px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      resize: none;
+      background: #FAFAFA;
     }
 
     /* 下部：操作ボタン */
@@ -247,11 +268,14 @@
       <div class="dish-list-container" id="dishListContainer"></div>
     </div>
 
-    <!-- メモ表示欄（常設） -->
+    <!-- メモ表示欄（拡張版） -->
     <div class="memo-section">
       <div class="memo-header">
         <span>📝 買い物メモ</span>
-        <button onclick="saveMemo()">保存</button>
+        <div class="memo-btn-group">
+          <button class="btn-memo-clear" onclick="clearMemo()">消去</button>
+          <button class="btn-memo-save" onclick="saveMemo()">保存</button>
+        </div>
       </div>
       <textarea id="memoText" class="memo-textarea" placeholder="買いたい材料などを入力..."></textarea>
     </div>
@@ -541,6 +565,12 @@
     function saveMemo() {
       localStorage.setItem('dinner_memo', document.getElementById('memoText').value);
       alert('メモを保存しました');
+    }
+    function clearMemo() {
+      if (confirm('買い物メモをすべて消去しますか？')) {
+        document.getElementById('memoText').value = '';
+        localStorage.removeItem('dinner_memo');
+      }
     }
 
     // 外部連携
